@@ -1,5 +1,8 @@
 #include "hblk_crypto.h"
 
+#define EC_PUB_LEN 65
+#define EC_CURVE NID_secp256k1
+
 /**
  * ec_from_pub - Creates EC_KEY structure from given public key
  * @pub: Pointer to uncompressed public key (65 bytes)
