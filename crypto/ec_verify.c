@@ -8,7 +8,8 @@
  * @sig: pointer to the signature to be checked
  * Return: 1 if the signature is valid, else 0
  */
-int ec_verify(EC_KEY const *key, uint8_t const *msg, size_t msglen, sig_t const *sig)
+int ec_verify(EC_KEY const *key, uint8_t const *msg, size_t msglen,
+			  sig_t const *sig)
 {
 	int ret;
 
