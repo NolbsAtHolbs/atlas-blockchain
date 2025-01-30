@@ -13,9 +13,12 @@
 #include <openssl/pem.h>
 #include <openssl/ecdsa.h>
 #include <openssl/obj_mac.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define EC_PUB_LEN 65 /* uncompressed pblc key: 0x04 + 32-byte X + 32-byte Y */
 #define EC_CURVE NID_secp256k1
+
 
 uint8_t *sha256(int8_t const *s, size_t len,
 				uint8_t digest[SHA256_DIGEST_LENGTH]);
