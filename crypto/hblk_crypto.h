@@ -23,6 +23,11 @@
 #define PRI_FILENAME "key.pem"
 #define SIG_MAX_LEN 72 /* ECDSA sigs in DER on secp256k1 fit within 72 bytes */
 
+/**
+ * struct sig_s - struct for EC sig data
+ * @sig: buffer for the signature
+ * @len: size of the signature
+ */
 typedef struct sig_s
 {
 	uint8_t sig[SIG_MAX_LEN];
