@@ -15,6 +15,7 @@
 #include <openssl/obj_mac.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #define EC_PUB_LEN 65 /* uncompressed pblc key: 0x04 + 32-byte X + 32-byte Y */
 #define EC_CURVE NID_secp256k1
