@@ -24,8 +24,8 @@ int ec_save(EC_KEY *key, char const *folder)
 	{ /* path exists but isn't a directory */
 		return (0);
 	} /* build file paths safely with snprintf */
-	snprintf(pub_path, sizeof(pub_path), "%s/%s", folder, "key.pem");
-	snprintf(priv_path, sizeof(priv_path), "%s/%s", folder, "key_pub.pem");
+	snprintf(pub_path, sizeof(pub_path), "%s/key.pem", folder);
+	snprintf(priv_path, sizeof(priv_path), "%s/key_pub.pem", folder);
 	fptr = fopen(pub_path, "w"); /* write public key to PEM */
 	if (!fptr)
 		return (0);
