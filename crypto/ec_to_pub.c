@@ -1,6 +1,6 @@
 #include "hblk_crypto.h"
 
-/*
+/**
 * ec_to_pub - extracts the public key from an EC_KEY opaque struct
 * @key: pointer to the EC_KEY struct to retrieve the pubkey from
 * @pub: address at which to store the extracted public key
