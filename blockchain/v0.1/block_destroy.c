@@ -1,6 +1,6 @@
 #include "blockchain.h"
 
-/*
+/**
  * block_destroy - frees the memory used by a block
  * @block: pointer to the block to delete
  */
