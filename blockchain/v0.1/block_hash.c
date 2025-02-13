@@ -1,4 +1,5 @@
 #include "blockchain.h"
+#include "hblk_crypto.h"
 
 /**
  * block_hash - computes the hash of a block's info and data
