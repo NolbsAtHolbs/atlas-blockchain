@@ -35,7 +35,7 @@ blockchain_t *blockchain_create(void)
 	memset(block->info.prev_hash, 0, SHA256_DIGEST_LENGTH);
 
 	block->data.len = 16; /* initialize block data */
-	memcpy(block->data.buffer, "Atlas School", 16);
+	memcpy(block->data.buffer, "Holberton School", 16); /* wrong text */
 
 	/* set genesis block hash */
 	memcpy(block->hash, ATLAS_SCHOOL_SHA256, SHA256_DIGEST_LENGTH);
