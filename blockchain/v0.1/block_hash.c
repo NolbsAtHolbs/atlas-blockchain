@@ -4,6 +4,7 @@
  * block_hash - computes the hash of a block's info and data
  * @block: pointer to the block to hash (unchanged)
  * @hash_buf: buffer where the resulting hash will be stored
+ * Return: the hashed buffer
  */
 uint8_t *block_hash(block_t const *block,
 					uint8_t hash_buf[SHA256_DIGEST_LENGTH])
