@@ -4,7 +4,6 @@
  * block_is_valid - Validates a block in the blockchain
  * @block: Pointer to the block to validate
  * @prev_block: Pointer to the previous block in the chain
- *
  * Return: 0 if valid, -1 otherwise
  */
 int block_is_valid(block_t const *block, block_t const *prev_block)
@@ -15,9 +14,8 @@ int block_is_valid(block_t const *block, block_t const *prev_block)
 
 	if (!block)
 		return (-1);
-	/* validate genesis Block */
 	if (block->info.index == 0)
-	{
+	{ /* validate genesis block */
 		if (prev_block)
 			return (-1);
 		if (block->data.len != 16 ||
@@ -26,26 +24,24 @@ int block_is_valid(block_t const *block, block_t const *prev_block)
 		for (i = 0; i < SHA256_DIGEST_LENGTH; i++)
 			if (block->info.prev_hash[i] != 0)
 				return (-1);
-		if (memcmp(block->hash, ATLAS_SCHOOL_SHA256, SHA256_DIGEST_LENGTH) != 0)
+		if (memcmp(block->hash, ATLAS_SCHOOL_SHA256,
+				   SHA256_DIGEST_LENGTH) != 0)
 			return (-1);
 	}
 	else
-	{
-		/* validate non-genesis Block */
+	{ /* validate non-genesis block */
 		if (!prev_block)
 			return (-1);
 		if (block->info.index != prev_block->info.index + 1)
 			return (-1);
-		if (memcmp(block->info.prev_hash, prev_block->hash, SHA256_DIGEST_LENGTH) != 0)
+		if (memcmp(block->info.prev_hash, prev_block->hash,
+				   SHA256_DIGEST_LENGTH) != 0)
 			return (-1);
 	}
 
-
 	if (block->data.len > BLOCKCHAIN_DATA_MAX)
 		return (-1);
-
-	/* validate hash */
-	block_hash(block, computed_hash);
+	block_hash(block, computed_hash); /* validate hash */
 	if (memcmp(block->hash, computed_hash, SHA256_DIGEST_LENGTH) != 0)
 		return (-1);
 
