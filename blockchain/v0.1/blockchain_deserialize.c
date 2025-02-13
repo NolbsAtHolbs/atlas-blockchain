@@ -60,7 +60,8 @@ blockchain_t *blockchain_deserialize(char const *path)
 	char header[HEADER_LENGTH];
 	uint32_t count, i;
 
-	if (!path || !(fp = fopen(path, "rb")))
+	fp = fopen(path, "rb");
+	if (!path || !fp)
 		return (NULL);
 	/* reading the 8 bytes of header */
 	if (fread(header, 1, HEADER_LENGTH, fp) != HEADER_LENGTH ||
