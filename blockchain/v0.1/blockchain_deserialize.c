@@ -1,84 +1,89 @@
 #include "blockchain.h"
 
+#define HEADER_LENGTH 8 /* "HBLK0.1" + 1 endianness byte */
+
 /**
- * blockchain_deserialize - loads a blockchain from a file
- * @path: path to the file
- *
- * Return: pointer to a new blockchain on success, or NULL on failure
+ * free_blockchain_partial - frees all blocks, list, and blockchain
+ * @bc: blockchain to free
+ * @fp: file pointer to close
+ */
+static void free_blockchain_partial(blockchain_t *bc, FILE *fp)
+{
+	size_t sz;
+
+	if (fp)
+		fclose(fp);
+	if (!bc)
+		return;
+	if (bc->chain)
+	{
+		sz = llist_size(bc->chain);
+		while (sz--)
+			block_destroy(llist_pop(bc->chain));
+		llist_destroy(bc->chain, 0, NULL);
+	}
+	free(bc);
+}
+
+/**
+ * read_one_block - reads a single block from file
+ * @fp: file pointer
+ * Return: pointer to new block, or NULL on error
+ */
+static block_t *read_one_block(FILE *fp)
+{
+	block_t *blk = calloc(1, sizeof(*blk));
+
+	if (!blk)
+		return (NULL);
+	/* info (24 bytes), data.len (4), data.buffer, hash (32) */
+	if (fread(&blk->info, sizeof(blk->info), 1, fp) != 1 ||
+		fread(&blk->data.len, sizeof(uint32_t), 1, fp) != 1 ||
+		fread(blk->data.buffer, blk->data.len, 1, fp) != 1 ||
+		fread(blk->hash, SHA256_DIGEST_LENGTH, 1, fp) != 1)
+	{
+		free(blk);
+		return (NULL);
+	}
+	return (blk);
+}
+
+/**
+ * blockchain_deserialize - loads a blockchain from file
+ * @path: file path
+ * Return: pointer to new blockchain, or NULL on failure
  */
 blockchain_t *blockchain_deserialize(char const *path)
 {
 	FILE *fp;
 	blockchain_t *bc;
-	block_t *blk;
-	char header[8];
+	char header[HEADER_LENGTH];
 	uint32_t count, i;
-	size_t r;
 
-	if (!path)
+	if (!path || !(fp = fopen(path, "rb")))
 		return (NULL);
-	fp = fopen(path, "rb"); /* open in binary mode */
-	if (!fp)
-		return (NULL);
-	/* check "HBLK0.1" in 1st 7 bytes, + endianess byte(?) */
-	r = fread(header, 1, 8, fp);
-	if (r != 8)
-	{
-		fclose(fp);
-		return (NULL);
-	}
-	if (memcmp(header, "HBLK", 4) != 0 || memcmp(header + 4, "0.1", 3) != 0)
-	{
-		fclose(fp);
-		return (NULL);
-	}
-	bc = calloc(1, sizeof(*bc)); /* allocate blockchain */
+	/* reading the 8 bytes of header */
+	if (fread(header, 1, HEADER_LENGTH, fp) != HEADER_LENGTH ||
+		memcmp(header, "HBLK", 4) || memcmp(header + 4, "0.1", 3))
+		return (fclose(fp), NULL);
+	/* allocate blockchain structure and create linked list */
+	bc = calloc(1, sizeof(*bc));
 	if (!bc)
-	{
-		fclose(fp);
-		return (NULL);
-	}
+		return (fclose(fp), NULL);
 	bc->chain = llist_create(MT_SUPPORT_FALSE);
 	if (!bc->chain)
-	{
-		fclose(fp);
-		free(bc);
-		return (NULL);
-	}
-	if (fread(&count, 4, 1, fp) != 1)
-	{ /* if reading num of blocks fails or is partial, return NULL. */
-		fclose(fp);
-		free(bc);
-		return (NULL);
-	}
-	/* for each block, read: block_info_t (24 bytes), data.len (4 bytes) */
-	/* data.buffer (data.len bytes), hash (32 bytes) */
+		return (free_blockchain_partial(bc, fp), NULL);
+	if (fread(&count, sizeof(uint32_t), 1, fp) != 1)
+		return (free_blockchain_partial(bc, fp), NULL);
+	/* loop over count, read each block & add to chain */
 	for (i = 0; i < count; i++)
 	{
-		blk = calloc(1, sizeof(*blk));
-		if (!blk)
-		{
-			fclose(fp);
-			while (llist_size(bc->chain))
-				block_destroy(llist_pop(bc->chain));
-			llist_destroy(bc->chain, 0, NULL);
-			free(bc);
-			return (NULL);
-		}
-		if (fread(&blk->info, sizeof(blk->info), 1, fp) != 1 ||
-			fread(&blk->data.len, 4, 1, fp) != 1 ||
-			fread(blk->data.buffer, blk->data.len, 1, fp) != 1 ||
-			fread(blk->hash, SHA256_DIGEST_LENGTH, 1, fp) != 1)
-		{
-			block_destroy(blk);
-			fclose(fp);
-			while (llist_size(bc->chain))
-				block_destroy(llist_pop(bc->chain));
-			llist_destroy(bc->chain, 0, NULL);
-			free(bc);
-			return (NULL);
-		}
-		llist_add_node(bc->chain, blk, ADD_NODE_REAR);
+		block_t *blk = read_one_block(fp);
+
+		if (!blk || llist_add_node(bc->chain, blk, ADD_NODE_REAR) == -1)
+			return (block_destroy(blk),
+				free_blockchain_partial(bc, fp),
+				NULL);
 	}
 	fclose(fp);
 	return (bc);
