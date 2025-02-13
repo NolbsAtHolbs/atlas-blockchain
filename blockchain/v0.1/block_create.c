@@ -7,7 +7,8 @@
  * @data_len: size of data to duplicate, capped by BLOCKCHAIN_DATA_MAX
  * Return: pointer to the newly allocated block, or NULL on failure
  */
-block_t *block_create(block_t const *prev, int8_t const *data, uint32_t data_len)
+block_t *block_create(block_t const *prev,
+					  int8_t const *data, uint32_t data_len)
 {
 	block_t *block;
 
@@ -26,9 +27,9 @@ block_t *block_create(block_t const *prev, int8_t const *data, uint32_t data_len
 
 	if (data_len > BLOCKCHAIN_DATA_MAX)
 		data_len = BLOCKCHAIN_DATA_MAX; /* if data size xceeds max, clamp it */
-	
+
 	/* copy given data into block's buffer, set data len */
-	memcpy(block->data.buffer, data, data_len); 
+	memcpy(block->data.buffer, data, data_len);
 	block->data.len = data_len;
 
 	/* zero out new block's hash field so it's unset at creation */
