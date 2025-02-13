@@ -23,7 +23,7 @@ uint8_t *block_hash(block_t const *block,
 	memcpy(buf + sizeof(block->info), block->data.buffer, block->data.len);
 
 	/* compute SHA-256 on that combined info+data, store result into 'hash_buf' */
-	SHA256((int8_t const *)buf, len, hash_buf);
+	SHA256((const unsigned char *)buf, len, hash_buf);
 
 	return (hash_buf);
 }
