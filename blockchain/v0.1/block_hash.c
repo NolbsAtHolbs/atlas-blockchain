@@ -18,7 +18,7 @@ uint8_t *block_hash(block_t const *block,
 	memcpy(buf, &block->info, sizeof(block->info));
 
 	/* 'data.len' informs how many bytes in 'data.buffer' to include */
-	/* can't exceed BLOCKCHAIN_DATA_MAX when copying */ 
+	/* can't exceed BLOCKCHAIN_DATA_MAX when copying */
 	len = sizeof(block->info) + block->data.len;
 	memcpy(buf + sizeof(block->info), block->data.buffer, block->data.len);
 
