@@ -10,8 +10,8 @@ void blockchain_destroy(blockchain_t *blockchain)
 		return;
 
 	/* frees each block by calling block_destroy on it.
-	 * '1' means "free each node's data",
-	 * and the (node_dtor_t) block_destroy function used does that.
+	/*'1' means "free each node's data",
+	/* and the (node_dtor_t) block_destroy function used does that.
 	 */
 	llist_destroy(blockchain->chain, 1, (node_dtor_t)block_destroy);
 
