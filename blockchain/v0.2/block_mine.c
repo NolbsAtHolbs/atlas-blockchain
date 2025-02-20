@@ -1,6 +1,6 @@
 #include "blockchain.h"
 
-/*
+/**
  * block_mine - finds a nonce so that block->hash meets block->info.difficulty
  * @block: pointer to the block to be mined
  */
