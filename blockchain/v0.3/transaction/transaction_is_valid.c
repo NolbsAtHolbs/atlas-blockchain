@@ -69,6 +69,9 @@ int transaction_is_valid(transaction_t const *transaction,
 	uint32_t total_in = 0, total_out = 0;
 	int i;
 
+	transaction_hash(transaction, hash);
+	if (memcmp(hash, transaction->id, SHA256_DIGEST_LENGTH) != 0)
+		return (0);
 	if (!transaction || !all_unspent)
 		return (0);
 	if (!transaction_hash(transaction, hash) ||
