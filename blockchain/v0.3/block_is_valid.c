@@ -16,12 +16,13 @@ static const block_t GENESIS_BLOCK = {
 	ATLAS_SCHOOL_SHA256 /* Set hash */
 };
 
+
 static int validate_tx_wrapper(void *node, unsigned int index, void *arg)
 {
 	(void)index;
-	return (transaction_is_valid((const transaction_t *)node,
-		(llist_t *)arg) ? 0 : 1);
+	return transaction_is_valid((transaction_t *)node, (llist_t *)arg);
 }
+
 /**
  * block_is_valid - checks the validity of a block
  * @block: pointer to block to validate
