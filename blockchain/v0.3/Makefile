@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -Wall -Werror -Wextra -pedantic -Wno-deprecated-declarations -std=gnu89
+CFLAGS := -Wall -Werror -Wextra -pedantic -Wno-deprecated-declarations
 AR := ar
 ARFLAGS := rc
 CPPFLAGS := -I. -Itransaction/ -I../../crypto
