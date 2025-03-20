@@ -22,7 +22,7 @@ transaction_t *coinbase_create(EC_KEY const *receiver, uint32_t block_index)
 	if (!tx)
 		return (NULL);
 
-		input = calloc(1, sizeof(tx_in_t)); /* create the coinbase input */
+	input = calloc(1, sizeof(tx_in_t)); /* create the coinbase input */
 	if (!input)
 		return (free(tx), NULL);
 
