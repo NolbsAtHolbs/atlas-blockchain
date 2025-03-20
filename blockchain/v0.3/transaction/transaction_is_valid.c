@@ -1,98 +1,98 @@
 #include "transaction.h"
 
-int find_utxo(void *node, void *input);
-int validate_input(llist_node_t node, unsigned int index, void *ctx);
+static int verify_input(tx_in_t *input, unsigned int index, void *ctx);
+static int match_utxo(void *node, void *input);
+static int sum_output_amount(tx_out_t *output, unsigned int index, void *ctx);
 
 /**
- * find_utxo - finds a matching utxo for a transaction input
- * @node: utxo node to compare
- * @index: unused
- * @input: transaction input to match
- * Return: 0 if no match, 1 if match
+ * transaction_is_valid - checks whether a transaction is valid
+ * @transaction: pointer to the transaction to verify
+ * @all_unspent: list of all unspent transaction outputs to date
+ * Return: 1 if the transaction is valid, otherwise 0
  */
-int find_utxo(void *node, void *input)
+int transaction_is_valid(transaction_t const *transaction,
+										llist_t *all_unspent)
 {
-	unspent_tx_out_t *utxo = node;
-	tx_in_t *tx_input = input;
+	uint8_t computed_hash[SHA256_DIGEST_LENGTH] = {0};
+	tv_t context = {0};
 
-	if (!memcmp(utxo->block_hash, tx_input->block_hash, SHA256_DIGEST_LENGTH) &&
-		!memcmp(utxo->tx_id, tx_input->tx_id, SHA256_DIGEST_LENGTH) &&
-		!memcmp(utxo->out.hash, tx_input->tx_out_hash, SHA256_DIGEST_LENGTH))
+	if (!transaction || !all_unspent)
 		return (0);
-	return (1);
+	/* compute hash, compare w/ stored tx ID */
+	transaction_hash(transaction, computed_hash);
+	if (memcmp(transaction->id, computed_hash, SHA256_DIGEST_LENGTH) != 0)
+		return (0);
+	memcpy(context.tx_id, transaction->id, SHA256_DIGEST_LENGTH);
+	context.unspent = all_unspent;
+	context.input = 0;
+	context.output = 0;
+	/* verify all inputs and sum input amount */
+	if (llist_for_each(transaction->inputs, verify_input, &context) != 0)
+		return (0);
+	/* sum output amounts */
+	llist_for_each(transaction->outputs, sum_output_amount, &context.output);
+	return (context.input == context.output); /* inputs must match outputs */
 }
 
-
 /**
- * validate_input - validates a single input by checking utxo and signature
- * @node: input node
+ * verify_input - verifies a transaction input
+ * @input: pointer to the transaction input
  * @index: unused
- * @ctx: context holding unspent outputs
- * Return: 0 if valid, 1 if invalid
+ * @ctx: transaction context (contains transaction ID and UTXO list)
+ * Return: 0 if valid, otherwise 1
  */
-int validate_input(llist_node_t node, unsigned int index, void *ctx)
+static int verify_input(tx_in_t *input, unsigned int index, void *ctx)
 {
-	tx_in_t *input = (tx_in_t *)node;
-	llist_t *all_unspent = (llist_t *)ctx;
-	unspent_tx_out_t *utxo;
-	EC_KEY *sender;
+	tv_t *context = (tv_t *)ctx;
+	unspent_tx_out_t *utxo = NULL;
+	EC_KEY *key = NULL;
 
 	(void)index;
-	if (!llist_find_node(all_unspent, find_utxo, input))
-		return (1);
-	/* find actual utxo to get the public key */
-	utxo = llist_find_node(all_unspent, find_utxo, input);
+	/* find matching UTXO */
+	utxo = llist_find_node(context->unspent, match_utxo, input);
 	if (!utxo)
 		return (1);
-	sender = ec_from_pub(utxo->out.pub);
-	if (!sender || !ec_verify(sender, input->tx_id, SHA256_DIGEST_LENGTH,
-		&input->sig))
+	/* verify signature using the UTXO's public key */
+	key = ec_from_pub(utxo->out.pub);
+	if (!key || !ec_verify(key, context->tx_id,
+							SHA256_DIGEST_LENGTH, &input->sig))
 	{
-		if (sender)
-			EC_KEY_free(sender);
+		if (key)
+			EC_KEY_free(key);
 		return (1);
 	}
-	EC_KEY_free(sender);
+	context->input += utxo->out.amount; /* update input total */
+	EC_KEY_free(key);
 	return (0);
 }
 
 /**
- * transaction_is_valid - verifies a transaction
- * @transaction: transaction to verify
- * @all_unspent: list of all unspent transaction outputs
- * Return: 1 if valid, 0 otherwise
+ * match_utxo - matches an unspent output to a transaction input
+ * @node: unspent output node
+ * @input: transaction input
+ * Return: 1 if it matches, otherwise 0
  */
-int transaction_is_valid(transaction_t const *transaction,
-						 llist_t *all_unspent)
+static int match_utxo(void *node, void *input)
 {
-	uint8_t hash[SHA256_DIGEST_LENGTH];
-	uint32_t total_in = 0, total_out = 0;
-	int i;
+	unspent_tx_out_t *utxo = (unspent_tx_out_t *)node;
+	tx_in_t *in = (tx_in_t *)input;
 
-	transaction_hash(transaction, hash);
-	if (memcmp(hash, transaction->id, SHA256_DIGEST_LENGTH) != 0)
-		return (0);
-	if (!transaction || !all_unspent)
-		return (0);
-	if (!transaction_hash(transaction, hash) ||
-		memcmp(hash, transaction->id, SHA256_DIGEST_LENGTH))
-		return (0);
-	/* validate all inputs */
-	if (llist_for_each(transaction->inputs, validate_input, all_unspent))
-		return (0);
-	for (i = 0; i < llist_size(transaction->inputs); i++)
-	{ /* sum inputs and outputs */
-		tx_in_t *input = llist_get_node_at(transaction->inputs, i);
-		unspent_tx_out_t *utxo = llist_find_node(
-												all_unspent, find_utxo, input);
-		if (!utxo)
-			return (0);
-		total_in += utxo->out.amount;
-	}
-	for (i = 0; i < llist_size(transaction->outputs); i++)
-	{
-		tx_out_t *output = llist_get_node_at(transaction->outputs, i);
-		total_out += output->amount;
-	}
-	return (total_in == total_out); /* ensure total input = total output */
+	return (!memcmp(utxo->block_hash, in->block_hash, SHA256_DIGEST_LENGTH) &&
+			!memcmp(utxo->tx_id, in->tx_id, SHA256_DIGEST_LENGTH) &&
+			!memcmp(utxo->out.hash, in->tx_out_hash, SHA256_DIGEST_LENGTH));
+}
+
+/**
+ * sum_output_amount - sums the amounts from all transaction outputs
+ * @output: pointer to the transaction output
+ * @index: unused
+ * @ctx: total output amount
+ * Return: always 0
+ */
+static int sum_output_amount(tx_out_t *output, unsigned int index, void *ctx)
+{
+	(void)index;
+
+	*(uint32_t *)ctx += output->amount;
+	return (0);
 }

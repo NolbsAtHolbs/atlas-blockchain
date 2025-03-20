@@ -99,6 +99,34 @@ typedef struct tx_context_s
 	llist_t *tx_inputs;
 } tx_context_t;
 
+/**
+ * struct tx_valid_s - Holds info for validating a transaction
+ * @input: input amounts
+ * @output: output amounts
+ * @tx_id: transaction id
+ * @unspent: list of uto_t
+ */
+typedef struct tx_valid_s
+{
+	uint32_t   input;
+	uint32_t   output;
+	uint8_t    tx_id[SHA256_DIGEST_LENGTH];
+	llist_t    *unspent;
+} tv_t;
+
+/**
+ * struct update_list_s - Holds info for updating unspent
+ * @hash: hash of block holding tx
+ * @unspent: list of uto_t
+ * @tx_id: transaction ID
+ */
+typedef struct update_list_s
+{
+	uint8_t    hash[SHA256_DIGEST_LENGTH];
+	llist_t    *unspent;
+	uint8_t    tx_id[SHA256_DIGEST_LENGTH];
+} ul_t;
+
 tx_out_t *tx_out_create(uint32_t amount, uint8_t const pub[EC_PUB_LEN]);
 unspent_tx_out_t *unspent_tx_out_create(
 	uint8_t block_hash[SHA256_DIGEST_LENGTH],
