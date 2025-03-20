@@ -3,7 +3,7 @@
 /**
  * is_utxo_spent_by_transactions - checks if UTXO is spent by any input
  * @u: the UTXO
- * @transactions: the transactions
+ * @transactions: list of transactions
  * Return: 1 if spent, 0 otherwise
  */
 static int is_utxo_spent_by_transactions(unspent_tx_out_t *u,
@@ -27,8 +27,8 @@ static int is_utxo_spent_by_transactions(unspent_tx_out_t *u,
 			if (!in)
 				continue;
 			if (!memcmp(in->block_hash, u->block_hash, SHA256_DIGEST_LENGTH) &&
-				!memcmp(in->tx_id, u->tx_id, SHA256_DIGEST_LENGTH) &&
-				!memcmp(in->tx_out_hash, u->out.hash, SHA256_DIGEST_LENGTH))
+			    !memcmp(in->tx_id, u->tx_id, SHA256_DIGEST_LENGTH) &&
+			    !memcmp(in->tx_out_hash, u->out.hash, SHA256_DIGEST_LENGTH))
 				spent = 1;
 		}
 	}
@@ -45,9 +45,10 @@ static int is_utxo_spent_by_transactions(unspent_tx_out_t *u,
 static int copy_keep_unspent(llist_t *all, llist_t *txs, llist_t *dst)
 {
 	unspent_tx_out_t *u, *u_copy;
-	size_t i, count = llist_size(all);
+	size_t i, count;
 	int spent;
 
+	count = llist_size(all);
 	for (i = 0; i < count; i++)
 	{
 		u = llist_get_node_at(all, i);
@@ -77,8 +78,8 @@ static int copy_keep_unspent(llist_t *all, llist_t *txs, llist_t *dst)
  * Return: 0 on success, 1 on failure
  */
 static int add_new_utxos(llist_t *txs,
-						 uint8_t block_hash[SHA256_DIGEST_LENGTH],
-						 llist_t *dst)
+			 uint8_t block_hash[SHA256_DIGEST_LENGTH],
+			 llist_t *dst)
 {
 	transaction_t *tx;
 	tx_out_t *out;
