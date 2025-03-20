@@ -34,17 +34,15 @@ uint8_t *transaction_hash(transaction_t const *transaction,
 		offset += SHA256_DIGEST_LENGTH;
 		memcpy(buffer + offset, in->tx_out_hash, SHA256_DIGEST_LENGTH);
 		offset += SHA256_DIGEST_LENGTH;
-	}
-	/* then copy outputs to buffer */
+	} /* then copy outputs to buffer */
 	for (i = 0; i < llist_size(transaction->outputs); i++)
 	{
 		out = llist_get_node_at(transaction->outputs, i);
 		memcpy(buffer + offset, out->hash, SHA256_DIGEST_LENGTH);
 		offset += SHA256_DIGEST_LENGTH;
 	}
-	/* hash the buffer */
 	if (!sha256((int8_t const *)buffer, total_size, hash_buf))
-	{
+	{ /* hash the buffer */
 		free(buffer);
 		return (NULL);
 	}
