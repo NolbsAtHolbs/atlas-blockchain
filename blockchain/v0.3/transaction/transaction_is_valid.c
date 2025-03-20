@@ -10,7 +10,8 @@ static int sum_output_amount(void *node, unsigned int index, void *ctx);
  * @all_unspent: list of all unspent transaction outputs to date
  * Return: 1 if the transaction is valid, otherwise 0
  */
-int transaction_is_valid(transaction_t const *transaction, llist_t *all_unspent)
+int transaction_is_valid(transaction_t const *transaction,
+						 llist_t *all_unspent)
 {
 	uint8_t computed_hash[SHA256_DIGEST_LENGTH] = {0};
 	tv_t context = {0};
@@ -61,7 +62,8 @@ static int verify_input(void *node, unsigned int index, void *ctx)
 		return (1);
 	/* verify signature using the UTXO's public key */
 	key = ec_from_pub(utxo->out.pub);
-	if (!key || !ec_verify(key, context->tx_id, SHA256_DIGEST_LENGTH, &input->sig))
+	if (!key || !ec_verify(key, context->tx_id,
+		SHA256_DIGEST_LENGTH, &input->sig))
 	{
 		if (key)
 			EC_KEY_free(key);
