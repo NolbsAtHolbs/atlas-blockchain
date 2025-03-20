@@ -5,7 +5,7 @@ static unspent_tx_out_t *find_unspent_output(tx_in_t *in, llist_t *all_unspnt);
 /**
  * find_unspent_output - finds unspent output matching input
  * @in: pointer to the transaction input
- * @all_unspent: list of all unspent transaction outputs
+ * @all_unspnt: list of all unspent transaction outputs
  * Return: pointer to matching unspent_tx_out_t, or NULL if not found
  */
 static unspent_tx_out_t *find_unspent_output(tx_in_t *in, llist_t *all_unspnt)
