@@ -35,5 +35,13 @@ block_t *block_create(block_t const *prev,
 	/* zero out new block's hash field so it's unset at creation */
 	memset(block->hash, 0, SHA256_DIGEST_LENGTH);
 
+	/* initialize tx list to an empty list */
+	block->transactions = llist_create(MT_SUPPORT_FALSE);
+	if (!block->transactions)
+	{
+		free(block);
+		return (NULL);
+	}
+
 	return (block);
 }
