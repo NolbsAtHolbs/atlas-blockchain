@@ -20,8 +20,8 @@ static unspent_tx_out_t *find_unspent_output(tx_in_t *in, llist_t *all_unspnt)
 	{
 		unspent = llist_get_node_at(all_unspnt, i);
 		if (memcmp(unspent->out.hash, in->tx_out_hash,
-			SHA256_DIGEST_LENGTH) == 0)
-				return (unspent);
+					SHA256_DIGEST_LENGTH) == 0)
+			return (unspent);
 	}
 	return (NULL);
 }
