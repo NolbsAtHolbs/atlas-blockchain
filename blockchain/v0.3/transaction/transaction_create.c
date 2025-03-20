@@ -4,23 +4,15 @@ int process_utxo(llist_node_t node, unsigned int index, void *ctx);
 void create_outputs(transaction_t *tx, tx_context_t *context,
 					EC_KEY const *receiver, uint32_t amount);
 void *free_context(tx_context_t *context);
+int sign_tx_input(llist_node_t node, unsigned int index, void *ctx);
 
-/**
- * struct tx_context_s - transaction processing context
- * @sender_pub: sender's public key
- * @sender: sender's private key
- * @balance: total balance from collected UTXOs
- * @selected_utxo: list of selected UTXOs
- * @tx_id: computed transaction ID
- */
-typedef struct tx_context_s
+int sign_tx_input(llist_node_t node, unsigned int index, void *ctx)
 {
-	uint8_t sender_pub[EC_PUB_LEN];
-	EC_KEY const *sender;
-	uint32_t balance;
-	llist_t *selected_utxo;
-	uint8_t tx_id[SHA256_DIGEST_LENGTH];
-} tx_context_t;
+	tx_context_t *context = (tx_context_t *)ctx;
+	tx_in_sign((tx_in_t *)node, context->tx_id, context->sender,
+			   context->selected_utxo);
+	return (0);
+}
 
 /**
  * process_utxo - collects UTXOs and creates inputs
@@ -44,7 +36,7 @@ int process_utxo(llist_node_t node, unsigned int index, void *ctx)
 		/* create input right after collecting UTXO */
 		input = tx_in_create(utxo);
 		if (input)
-			llist_add_node(context->sender, input, ADD_NODE_REAR);
+			llist_add_node(context->selected_utxo, input, ADD_NODE_REAR);
 	}
 	return (0);
 }
@@ -132,9 +124,8 @@ transaction_t *transaction_create(EC_KEY const *sender,
 
 	transaction_hash(tx, tx->id); /* compute tx ID, sign inputs */
 	memcpy(context->tx_id, tx->id, SHA256_DIGEST_LENGTH);
-	llist_for_each(tx->inputs,
-				   (int (*)(llist_node_t, unsigned int, void *))tx_in_sign,
-				   context);
+	llist_for_each(tx->inputs, sign_tx_input, context);
+
 	free_context(context);
 	return (tx);
 }
