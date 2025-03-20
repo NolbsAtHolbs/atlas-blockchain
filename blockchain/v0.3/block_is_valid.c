@@ -19,6 +19,7 @@ static const block_t GENESIS_BLOCK = {
 
 static int validate_tx_wrapper(void *node, unsigned int index, void *arg)
 {
+	(void)index;
 	return transaction_is_valid((transaction_t *)node, (llist_t *)arg);
 }
 
