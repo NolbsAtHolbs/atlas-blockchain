@@ -95,6 +95,8 @@ typedef struct tx_context_s
 	uint32_t balance;
 	llist_t *selected_utxo;
 	uint8_t tx_id[SHA256_DIGEST_LENGTH];
+	uint32_t amount;
+	llist_t *tx_inputs;
 } tx_context_t;
 
 tx_out_t *tx_out_create(uint32_t amount, uint8_t const pub[EC_PUB_LEN]);

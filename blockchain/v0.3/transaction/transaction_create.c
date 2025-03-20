@@ -36,15 +36,20 @@ int process_utxo(llist_node_t node, unsigned int index, void *ctx)
 
 	(void)index;
 
-	if (!memcmp(utxo->out.pub, context->sender_pub, EC_PUB_LEN))
+	if (!memcmp(utxo->out.pub, context->sender_pub, EC_PUB_LEN) &&
+		context->balance < context->amount)
 	{
 		llist_add_node(context->selected_utxo, utxo, ADD_NODE_REAR);
 		context->balance += utxo->out.amount;
-		/* create input right after collecting UTXO */
+
 		input = tx_in_create(utxo);
 		if (input)
-			llist_add_node(context->selected_utxo, input, ADD_NODE_REAR);
+			llist_add_node(context->tx_inputs, input, ADD_NODE_REAR);
+
+		if (context->balance >= context->amount)
+			return (1);
 	}
+
 	return (0);
 }
 
@@ -114,23 +119,28 @@ transaction_t *transaction_create(EC_KEY const *sender,
 
 	context->sender = sender;
 	context->balance = 0;
+	context->amount = amount;
 	context->selected_utxo = llist_create(MT_SUPPORT_FALSE);
 
-	tx = calloc(1, sizeof(transaction_t)); /* collect UTXOs, create inputs */
+	tx = calloc(1, sizeof(transaction_t)); /* create transaction */
 	if (!tx)
 		return (free_context(context), NULL);
 
 	tx->inputs = llist_create(MT_SUPPORT_FALSE);
+	context->tx_inputs = tx->inputs;
+
 	llist_for_each(all_unspent, process_utxo, context);
 
-	if (context->balance < amount) /* check balance */
+	if (context->balance < amount)
 		return (free_context(context), NULL);
 
-	tx->outputs = llist_create(MT_SUPPORT_FALSE); /* create outputs */
+	tx->outputs = llist_create(MT_SUPPORT_FALSE);
+
 	create_outputs(tx, context, receiver, amount);
 
-	transaction_hash(tx, tx->id); /* compute tx ID, sign inputs */
+	transaction_hash(tx, tx->id);
 	memcpy(context->tx_id, tx->id, SHA256_DIGEST_LENGTH);
+
 	llist_for_each(tx->inputs, sign_tx_input, context);
 
 	free_context(context);
