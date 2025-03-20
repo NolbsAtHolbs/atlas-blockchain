@@ -14,5 +14,8 @@ void blockchain_destroy(blockchain_t *blockchain)
 	/* and the (node_dtor_t) block_destroy function used does that. */
 	llist_destroy(blockchain->chain, 1, (node_dtor_t)block_destroy);
 
+	/* free unspent list */
+	llist_destroy(blockchain->unspent, 1, free);
+
 	free(blockchain);
 }

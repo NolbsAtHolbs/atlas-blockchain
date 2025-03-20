@@ -20,6 +20,15 @@ blockchain_t *blockchain_create(void)
 		return (NULL);
 	}
 
+	/* create unspent outputs list */
+	bc->unspent = llist_create(MT_SUPPORT_FALSE);
+	if (!bc->unspent)
+	{
+		llist_destroy(bc->chain, 0, NULL);
+		free(bc);
+		return (NULL);
+	}
+
 	block = calloc(1, sizeof(*block)); /* create genesis block */
 	if (!block)
 	{
