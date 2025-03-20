@@ -18,11 +18,10 @@ tx_out_t *tx_out_create(uint32_t amount, uint8_t const pub[EC_PUB_LEN])
 	memcpy(out->pub, pub, EC_PUB_LEN);
 	memcpy(data, &amount, sizeof(amount)); /* hash prep */
 	memcpy(data + sizeof(amount), pub, EC_PUB_LEN);
-	if (!sha256(data, sizeof(data), out->hash))
+	if (!sha256((int8_t const *)data, sizeof(data), out->hash))
 	{ /* generate hash of the amount and pub */
 		free(out);
 		return (NULL);
 	}
 	return (out);
 }
-
