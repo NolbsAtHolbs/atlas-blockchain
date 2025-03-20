@@ -6,11 +6,18 @@ void create_outputs(transaction_t *tx, tx_context_t *context,
 void *free_context(tx_context_t *context);
 int sign_tx_input(llist_node_t node, unsigned int index, void *ctx);
 
+/**
+ * sign_tx_input - signs a tx input
+ * @node: pointer to the transaction input node to sign
+ * @index: unused index parameter
+ * @ctx: pointer to the transaction context containing sender key and ID
+ * Return: 0
+ */
 int sign_tx_input(llist_node_t node, unsigned int index, void *ctx)
 {
+	(void)index;
 	tx_context_t *context = (tx_context_t *)ctx;
-	tx_in_sign((tx_in_t *)node, context->tx_id, context->sender,
-			   context->selected_utxo);
+	tx_in_sign((tx_in_t *)node, context->tx_id, context->sender, context->selected_utxo);
 	return (0);
 }
 
