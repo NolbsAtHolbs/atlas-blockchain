@@ -1,51 +1,61 @@
 #include "blockchain.h"
 
+int append_tx_id(transaction_t *transaction,
+								 unsigned int index, uint8_t *buffer);
+
 /**
- * block_hash - computes the hash of a block's info, data, and transactions
- * @block: pointer to the block to hash (unchanged)
- * @hash_buf: buffer where the resulting hash will be stored
- * Return: the hashed buffer
+ * block_hash - computes the hash of a block's info and transaction IDs
+ * @block: pointer to the block to hash
+ * @hash_buf: buffer to store the resulting hash
+ * Return: pointer to hash_buf, or NULL on failure
  */
-uint8_t *block_hash(block_t const *block,
-					uint8_t hash_buf[SHA256_DIGEST_LENGTH])
+uint8_t *block_hash(block_t const *block, uint8_t hash_buf[SHA256_DIGEST_LENGTH])
 {
-	uint8_t *buf;
-	size_t len, tx_len = 0;
-	transaction_t *tx;
-	int i;
+	uint8_t *buffer = NULL;
+	size_t block_size = 0, total_size = 0;
+	size_t tx_count = 0;
 
 	if (!block || !hash_buf)
 		return (NULL);
 
-	/* compute size of all txs */
-	for (i = 0; i < llist_size(block->transactions); i++)
-	{
-		tx = llist_get_node_at(block->transactions, i);
-		if (tx)
-			tx_len += sizeof(*tx);
-	}
+	/* calculate block size and tx count */
+	block_size = sizeof(block->info) + block->data.len;
+	if (block->transactions)
+		tx_count = llist_size(block->transactions);
 
-	/* allocate memory for block info + data + txs */
-	len = sizeof(block->info) + block->data.len + tx_len;
-	buf = malloc(len);
-	if (!buf)
+	/* calculate total size to allocate */
+	total_size = block_size + (tx_count * SHA256_DIGEST_LENGTH);
+
+	buffer = calloc(1, total_size);
+	if (!buffer)
 		return (NULL);
 
-	/* copy block info and data into the buffer */
-	memcpy(buf, &block->info, sizeof(block->info));
-	memcpy(buf + sizeof(block->info), block->data.buffer, block->data.len);
+	/* copy block info and data to buffer */
+	memcpy(buffer, &block->info, sizeof(block->info));
+	memcpy(buffer + sizeof(block->info), block->data.buffer, block->data.len);
 
-	/* copy tx data into buffer */
-	tx_len = sizeof(block->info) + block->data.len;
-	for (i = 0; i < llist_size(block->transactions); i++)
-	{
-		tx = llist_get_node_at(block->transactions, i);
-		if (tx)
-			memcpy(buf + tx_len, tx, sizeof(*tx)), tx_len += sizeof(*tx);
-	}
+	/* append tx IDs if present */
+	if (tx_count)
+		llist_for_each(block->transactions,
+			(node_func_t)append_tx_id,
+			buffer + block_size);
 
-	/* compute SHA-256 on combined info + data + txs */
-	SHA256((const unsigned char *)buf, len, hash_buf);
-	free(buf);
+	SHA256(buffer, total_size, hash_buf); /* compute SHA256 hash */
+
+	free(buffer);
 	return (hash_buf);
+}
+
+/**
+ * append_tx_id - appends transaction ID to buffer
+ * @transaction: pointer to the transaction
+ * @index: index of the transaction
+ * @buffer: buffer to append the transaction ID
+ * Return: always 0
+ */
+int append_tx_id(transaction_t *transaction, unsigned int index, uint8_t *buffer)
+{
+	memcpy(buffer + (index * SHA256_DIGEST_LENGTH), transaction->id,
+		   SHA256_DIGEST_LENGTH);
+	return (0);
 }
