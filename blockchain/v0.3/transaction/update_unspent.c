@@ -1,109 +1,143 @@
 #include "transaction.h"
 
-static int process_transaction(transaction_t *tx, unsigned int idx, ul_t *ctx);
-static int clean_spent_outputs(tx_in_t *input, unsigned int idx, ul_t *ctx);
-static int match_spent_output(unspent_tx_out_t *unspent, tx_in_t *input);
-static int add_unspent_output(tx_out_t *output, unsigned int idx, ul_t *ctx);
+/**
+ * is_utxo_spent_by_transactions - checks if UTXO is spent by any input
+ * @u: the UTXO
+ * @transactions: list of transactions
+ * Return: 1 if spent, 0 otherwise
+ */
+static int is_utxo_spent_by_transactions(unspent_tx_out_t *u,
+					 llist_t *transactions)
+{
+	transaction_t *tx;
+	tx_in_t *in;
+	size_t i, j, tx_count, in_count;
+	int spent = 0;
+
+	tx_count = llist_size(transactions);
+	for (i = 0; i < tx_count && !spent; i++)
+	{
+		tx = llist_get_node_at(transactions, i);
+		if (!tx)
+			continue;
+		in_count = llist_size(tx->inputs);
+		for (j = 0; j < in_count && !spent; j++)
+		{
+			in = llist_get_node_at(tx->inputs, j);
+			if (!in)
+				continue;
+			if (!memcmp(in->block_hash, u->block_hash, SHA256_DIGEST_LENGTH) &&
+			    !memcmp(in->tx_id, u->tx_id, SHA256_DIGEST_LENGTH) &&
+			    !memcmp(in->tx_out_hash, u->out.hash, SHA256_DIGEST_LENGTH))
+				spent = 1;
+		}
+	}
+	return (spent);
+}
 
 /**
- * update_unspent - Updates the list of unspent transaction outputs
- * @transactions: list of valid transactions
- * @block_hash: hash of the block containing the transactions
- * @all_unspent: list of existing unspent outputs
- *
- * Return: pointer to the updated list of unspent transaction outputs
+ * copy_keep_unspent - copy old UTXOs that are not spent
+ * @all: old unspent
+ * @txs: transactions
+ * @dst: new unspent
+ * Return: 0 on success, 1 on failure
  */
-llist_t *update_unspent(
-	llist_t *transactions, uint8_t block_hash[SHA256_DIGEST_LENGTH],
+static int copy_keep_unspent(llist_t *all, llist_t *txs, llist_t *dst)
+{
+	unspent_tx_out_t *u, *u_copy;
+	size_t i, count;
+	int spent;
+
+	count = llist_size(all);
+	for (i = 0; i < count; i++)
+	{
+		u = llist_get_node_at(all, i);
+		if (!u)
+			continue;
+		spent = is_utxo_spent_by_transactions(u, txs);
+		if (spent)
+			continue;
+		u_copy = malloc(sizeof(*u_copy));
+		if (!u_copy)
+			return (1);
+		memcpy(u_copy, u, sizeof(*u_copy));
+		if (llist_add_node(dst, u_copy, ADD_NODE_REAR) == -1)
+		{
+			free(u_copy);
+			return (1);
+		}
+	}
+	return (0);
+}
+
+/**
+ * add_new_utxos - add new UTXOs from each tx's outputs
+ * @txs: transactions
+ * @block_hash: block hash
+ * @dst: new unspent
+ * Return: 0 on success, 1 on failure
+ */
+static int add_new_utxos(llist_t *txs,
+			 uint8_t block_hash[SHA256_DIGEST_LENGTH],
+			 llist_t *dst)
+{
+	transaction_t *tx;
+	tx_out_t *out;
+	unspent_tx_out_t *u;
+	size_t i, j, tx_count, out_count;
+
+	tx_count = llist_size(txs);
+	for (i = 0; i < tx_count; i++)
+	{
+		tx = llist_get_node_at(txs, i);
+		if (!tx)
+			continue;
+		out_count = llist_size(tx->outputs);
+		for (j = 0; j < out_count; j++)
+		{
+			out = llist_get_node_at(tx->outputs, j);
+			if (!out)
+				continue;
+			u = unspent_tx_out_create(block_hash, tx->id, out);
+			if (!u)
+				return (1);
+			if (llist_add_node(dst, u, ADD_NODE_REAR) == -1)
+			{
+				free(u);
+				return (1);
+			}
+		}
+	}
+	return (0);
+}
+
+/**
+ * update_unspent - updates the list of all unspent transaction outputs
+ * @transactions: validated transactions
+ * @block_hash: block hash
+ * @all_unspent: current unspent
+ * Return: new updated unspent, or NULL on failure
+ */
+llist_t *update_unspent(llist_t *transactions,
+	uint8_t block_hash[SHA256_DIGEST_LENGTH],
 	llist_t *all_unspent)
 {
-	ul_t ctx;
+	llist_t *new_unspent;
+	int err;
 
-	if (!transactions || !all_unspent || !block_hash)
+	new_unspent = llist_create(MT_SUPPORT_FALSE);
+	if (!new_unspent)
 		return (NULL);
 
-	ctx.unspent = all_unspent;
-	memcpy(ctx.hash, block_hash, SHA256_DIGEST_LENGTH);
+	err = copy_keep_unspent(all_unspent, transactions, new_unspent);
+	if (!err)
+		err = add_new_utxos(transactions, block_hash, new_unspent);
 
-	/* Process each transaction */
-	llist_for_each(transactions, (node_func_t)process_transaction, &ctx);
-
-	return (all_unspent);
-}
-
-/**
- * process_transaction - Processes a transaction's inputs and outputs
- * @tx: transaction to process
- * @idx: index of transaction
- * @ctx: context containing unspent list and block info
- *
- * Return: 0 on success
- */
-static int process_transaction(transaction_t *tx, unsigned int idx, ul_t *ctx)
-{
-	(void)idx;
-
-	memcpy(ctx->tx_id, tx->id, SHA256_DIGEST_LENGTH);
-
-	/* Remove spent outputs and add new ones */
-	llist_for_each(tx->inputs, (node_func_t)clean_spent_outputs, ctx);
-	llist_for_each(tx->outputs, (node_func_t)add_unspent_output, ctx);
-
-	return (0);
-}
-
-/**
- * clean_spent_outputs - Removes spent outputs from unspent list
- * @input: transaction input
- * @idx: index of input
- * @ctx: context containing unspent list and block info
- *
- * Return: 0 on success
- */
-static int clean_spent_outputs(tx_in_t *input, unsigned int idx, ul_t *ctx)
-{
-	(void)idx;
-
-	llist_remove_node(ctx->unspent,
-		(node_ident_t)(int (*)(void *, void *))match_spent_output,
-		input, 1, NULL);
-
-	return (0);
-}
-
-/**
- * match_spent_output - Checks if an output matches an input
- * @unspent: unspent transaction output
- * @input: transaction input
- *
- * Return: 1 if match, 0 otherwise
- */
-static int match_spent_output(unspent_tx_out_t *unspent, tx_in_t *input)
-{
-	return (!memcmp(unspent->block_hash, input->block_hash, SHA256_DIGEST_LENGTH) &&
-			!memcmp(unspent->tx_id, input->tx_id, SHA256_DIGEST_LENGTH) &&
-			!memcmp(unspent->out.hash, input->tx_out_hash, SHA256_DIGEST_LENGTH));
-}
-
-/**
- * add_unspent_output - Adds a new unspent output to the list
- * @output: transaction output to add
- * @idx: index of output
- * @ctx: context containing unspent list and block info
- *
- * Return: 0 on success
- */
-static int add_unspent_output(tx_out_t *output, unsigned int idx, ul_t *ctx)
-{
-	unspent_tx_out_t *new;
-
-	(void)idx;
-
-	new = unspent_tx_out_create(ctx->hash, ctx->tx_id, output);
-	if (!new)
-		return (1);
-
-	llist_add_node(ctx->unspent, new, ADD_NODE_REAR);
-
-	return (0);
+	if (err)
+	{
+		llist_destroy(new_unspent, 1, free);
+		return (NULL);
+	}
+	llist_destroy(all_unspent, 1, free);
+	return (new_unspent);
 }
