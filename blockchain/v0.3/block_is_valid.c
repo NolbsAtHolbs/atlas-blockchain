@@ -31,45 +31,42 @@ static int validate_tx_wrapper(void *node, unsigned int index, void *arg)
  * Return: 0 if valid, -1 otherwise
  */
 int block_is_valid(block_t const *block, block_t const *prev_block,
-				   llist_t *all_unspent)
+					llist_t *all_unspent)
 {
 	uint8_t computed_hash[SHA256_DIGEST_LENGTH];
-	uint8_t prev_hash[SHA256_DIGEST_LENGTH];
+	transaction_t *coinbase_tx;
 
-	if (!block || !all_unspent)
+	if (!block || !block->transactions || llist_size(block->transactions) < 1)
 		return (-1);
 
+	/* if genesis block, validate with known genesis data */
 	if (block->info.index == 0)
-	{ /* validate genesis block */
-		if (prev_block || memcmp(block, &GENESIS_BLOCK,
-				sizeof(GENESIS_BLOCK)))
-			return (-1);
-	}
-	else
-	{ /* validate regular block */
-		if (!prev_block || block->info.index != prev_block->info.index + 1)
-			return (-1);
-		block_hash(prev_block, prev_hash);
-		if (memcmp(prev_block->hash, prev_hash, SHA256_DIGEST_LENGTH) != 0 ||
-			memcmp(block->info.prev_hash, prev_hash,
-					SHA256_DIGEST_LENGTH) != 0)
-			return (-1);
-	}
+		return (memcmp(block, &GENESIS_BLOCK,
+			sizeof(GENESIS_BLOCK)) == 0 ? 0 : -1);
 
-	if (block->data.len > BLOCKCHAIN_DATA_MAX) /* check block data size */
+	if (!prev_block || block->info.index != prev_block->info.index + 1)
 		return (-1);
 
-	block_hash(block, computed_hash); /* validate block hash */
+	block_hash(prev_block, computed_hash);
+	if (memcmp(prev_block->hash, computed_hash, SHA256_DIGEST_LENGTH) != 0 ||
+		memcmp(block->info.prev_hash, computed_hash,
+			SHA256_DIGEST_LENGTH) != 0)
+		return (-1);
+
+	coinbase_tx = llist_get_head(block->transactions); /* valid8 coinbase tx */
+	if (!coinbase_tx || !coinbase_is_valid(coinbase_tx, block->info.index))
+		return (-1);
+
+	/* validate all other txs */
+	if (llist_for_each(block->transactions, (node_func_t)validate_tx_wrapper,
+		all_unspent) != 0)
+		return (-1);
+
+	block_hash(block, computed_hash); /* check block hash matches */
 	if (memcmp(block->hash, computed_hash, SHA256_DIGEST_LENGTH) != 0)
 		return (-1);
-	/* validate txs */
-	if (!block->transactions || llist_size(block->transactions) < 1)
-		return (-1);
-	if (coinbase_is_valid(llist_get_head(block->transactions),
-						  block->info.index) == 0)
-		return (-1);
-	if (llist_for_each(block->transactions, validate_tx_wrapper, all_unspent) != 0)
-		return (-1);
+
+	/* check difficulty */
 	if (!hash_matches_difficulty(block->hash, block->info.difficulty))
 		return (-1);
 	return (0);
