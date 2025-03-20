@@ -9,7 +9,8 @@ int append_tx_id(transaction_t *transaction,
  * @hash_buf: buffer to store the resulting hash
  * Return: pointer to hash_buf, or NULL on failure
  */
-uint8_t *block_hash(block_t const *block, uint8_t hash_buf[SHA256_DIGEST_LENGTH])
+uint8_t *block_hash(block_t const *block,
+					uint8_t hash_buf[SHA256_DIGEST_LENGTH])
 {
 	uint8_t *buffer = NULL;
 	size_t block_size = 0, total_size = 0;
@@ -53,7 +54,8 @@ uint8_t *block_hash(block_t const *block, uint8_t hash_buf[SHA256_DIGEST_LENGTH]
  * @buffer: buffer to append the transaction ID
  * Return: always 0
  */
-int append_tx_id(transaction_t *transaction, unsigned int index, uint8_t *buffer)
+int append_tx_id(transaction_t *transaction, unsigned int index,
+				 uint8_t *buffer)
 {
 	memcpy(buffer + (index * SHA256_DIGEST_LENGTH), transaction->id,
 		   SHA256_DIGEST_LENGTH);
