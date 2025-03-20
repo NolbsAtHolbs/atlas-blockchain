@@ -1,6 +1,6 @@
 #include "transaction.h"
 
-int find_utxo(llist_node_t node, unsigned int index, void *input);
+int find_utxo(void *node, void *input);
 int validate_input(llist_node_t node, unsigned int index, void *ctx);
 
 /**
@@ -10,18 +10,18 @@ int validate_input(llist_node_t node, unsigned int index, void *ctx);
  * @input: transaction input to match
  * Return: 0 if no match, 1 if match
  */
-int find_utxo(llist_node_t node, unsigned int index, void *input)
+int find_utxo(void *node, void *input)
 {
-	unspent_tx_out_t *utxo = (unspent_tx_out_t *)node;
-	tx_in_t *tx_in = (tx_in_t *)input;
+	unspent_tx_out_t *utxo = node;
+	tx_in_t *tx_input = input;
 
-	(void)index;
-	if (!memcmp(tx_in->block_hash, utxo->block_hash, SHA256_DIGEST_LENGTH) &&
-		!memcmp(tx_in->tx_id, utxo->tx_id, SHA256_DIGEST_LENGTH) &&
-		!memcmp(tx_in->tx_out_hash, utxo->out.hash, SHA256_DIGEST_LENGTH))
-		return (1);
-	return (0);
+	if (!memcmp(utxo->block_hash, tx_input->block_hash, SHA256_DIGEST_LENGTH) &&
+		!memcmp(utxo->tx_id, tx_input->tx_id, SHA256_DIGEST_LENGTH) &&
+		!memcmp(utxo->out.hash, tx_input->tx_out_hash, SHA256_DIGEST_LENGTH))
+		return (0);
+	return (1);
 }
+
 
 /**
  * validate_input - validates a single input by checking utxo and signature
