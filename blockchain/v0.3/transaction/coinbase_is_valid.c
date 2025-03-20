@@ -39,9 +39,9 @@ int coinbase_is_valid(transaction_t const *coinbase, uint32_t block_index)
 
 	/* block_hash, tx_id, and signature must be zeroed */
 	if (memcmp(input->block_hash,
-			(uint8_t[SHA256_DIGEST_LENGTH]){0}, SHA256_DIGEST_LENGTH) != 0 ||
+			(uint8_t[SHA256_DIGEST_LENGTH]) {0}, SHA256_DIGEST_LENGTH) != 0 ||
 		memcmp(input->tx_id,
-			(uint8_t[SHA256_DIGEST_LENGTH]){0}, SHA256_DIGEST_LENGTH) != 0 ||
+			(uint8_t[SHA256_DIGEST_LENGTH]) {0}, SHA256_DIGEST_LENGTH) != 0 ||
 		memcmp(&input->sig, &(sig_t){0}, sizeof(sig_t)) != 0)
 		return (0);
 
