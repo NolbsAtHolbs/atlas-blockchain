@@ -80,6 +80,23 @@ typedef struct unspent_tx_out_s
     tx_out_t    out;
 } unspent_tx_out_t;
 
+/**
+ * struct tx_context_s - transaction processing context
+ * @sender_pub: sender's public key
+ * @sender: sender's private key
+ * @balance: total balance from collected UTXOs
+ * @selected_utxo: list of selected UTXOs
+ * @tx_id: computed transaction ID
+ */
+typedef struct tx_context_s
+{
+	uint8_t sender_pub[EC_PUB_LEN];
+	EC_KEY const *sender;
+	uint32_t balance;
+	llist_t *selected_utxo;
+	uint8_t tx_id[SHA256_DIGEST_LENGTH];
+} tx_context_t;
+
 tx_out_t *tx_out_create(uint32_t amount, uint8_t const pub[EC_PUB_LEN]);
 unspent_tx_out_t *unspent_tx_out_create(
 	uint8_t block_hash[SHA256_DIGEST_LENGTH],
