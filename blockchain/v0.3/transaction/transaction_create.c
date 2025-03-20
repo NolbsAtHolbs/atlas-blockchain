@@ -17,7 +17,9 @@ int sign_tx_input(llist_node_t node, unsigned int index, void *ctx)
 {
 	(void)index;
 	tx_context_t *context = (tx_context_t *)ctx;
-	tx_in_sign((tx_in_t *)node, context->tx_id, context->sender, context->selected_utxo);
+
+	tx_in_sign((tx_in_t *)node, context->tx_id, context->sender,
+			   context->selected_utxo);
 	return (0);
 }
 
@@ -49,7 +51,6 @@ int process_utxo(llist_node_t node, unsigned int index, void *ctx)
 		if (context->balance >= context->amount)
 			return (1);
 	}
-
 	return (0);
 }
 
